@@ -42,3 +42,9 @@ Zdrojový repozitář: `destrosvet/slabik`. Railway používá `Dockerfile` a `r
 python scripts/smoke_check.py
 node --check .slabik-js-check.js
 ```
+
+## Herní režim (Kouzelný les)
+
+`adventure.js` nyní zobrazuje paralaxní vrstvy lesa a dívku jako animovaný sprite atlas. Pro vykreslení skutečných sprite assetů umístěte exportované PNG soubory do kořenové složky `assets/` (veřejné URL `/assets/girl.png`, `/assets/forest1.png` až `/assets/forest5.png`). Dokud chybějí, hra používá jednoduché záložní kresby v Canvasu. Po úspěšné slabice vyšle kouzlo a postoupí, na konci otevře truhlu.
+
+Originální balíčky obsahují zákaz samostatné redistribuce; exportované herní atlasy jsou proto poskytovány odděleně v konverzačním ZIP archivu, nikoli jako samostatné zdrojové soubory v tomto veřejném repozitáři.
