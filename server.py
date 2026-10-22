@@ -10,11 +10,14 @@ from scipy.signal import resample_poly
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from model_engine import MODEL_ID, SyllableEngine
 
 ROOT = Path(__file__).resolve().parent
 app = FastAPI(title="Slabík", version="0.4.0")
+(ROOT / "assets").mkdir(exist_ok=True)
+app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 engine = SyllableEngine()
 inference_lock = threading.Lock()
 lessons = json.loads((ROOT / "lessons.json").read_text(encoding="utf-8"))
