@@ -1,0 +1,42 @@
+[
+  {
+    "id": "omls-01",
+    "title": "Lekce 1: O, M, L, S",
+    "description": "Čtení slabik a rozlišování délky",
+    "items": [
+      "MO",
+      "LO",
+      "SO",
+      "MÓ",
+      "lé",
+      "Lo",
+      "so",
+      "mó",
+      "le",
+      "só",
+      "Só",
+      "Mo",
+      "lo",
+      "sá",
+      "La",
+      "se",
+      "lá",
+      "mé",
+      "mo",
+      "Ló",
+      "ma",
+      "Mé",
+      "Má",
+      "LE",
+      "se"
+    ],
+    "enabled": true
+  },
+  {
+    "id": "next-02",
+    "title": "Lekce 2",
+    "description": "Pro další slabiky",
+    "items": [],
+    "enabled": false
+  }
+]
