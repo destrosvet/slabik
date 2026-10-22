@@ -9,7 +9,7 @@
   const canvas=scene.querySelector("canvas"),ctx=canvas.getContext("2d");
   if(!ctx)return;
   const W=960,H=340;
-  const sprite={}; for(const name of ['girl','forest1','forest2','forest3','forest4','forest5','trees','ground']){const img=new Image();img.src='/assets/'+name+'.png';sprite[name]=img;}
+  const sprite={}; for(const name of ['girl','forest1','forest2','forest3','forest4','forest5','trees','ground','slime','fox','wisp','warrior','chest','healing']){const img=new Image();img.src='/assets/'+name+'.png';sprite[name]=img;}
   const ready=name=>sprite[name]?.complete&&sprite[name]?.naturalWidth>0;
   let state={progress:0,total:25,phase:"idle",since:0,kind:"slime",finished:false};
   const now=()=>performance.now();
@@ -32,14 +32,16 @@
     poly([[x-24,y-97+walk],[x+21,y-97+walk],[x+15,y-92+walk],[x-27,y-92+walk]],"#543070");
     line(x+17,y-62+walk,x+32,y-99+walk,"#624934",5);ellipse(x+33,y-101+walk,6,6,"#90eff8");
   }
-  function monster(x,y,t,kind){const bob=Math.sin(t*.006)*4;ellipse(x,y+4,35,6,"#10292266");
+  function monster(x,y,t,kind){
+    if(ready(kind==='goblin'?'warrior':'slime')){const boss=kind==='goblin',img=sprite[boss?'warrior':'slime'];const frame=Math.floor(t/140)%(boss?5:8);ctx.imageSmoothingEnabled=false;ctx.drawImage(img,boss?frame*80:frame*32,0,boss?80:32,boss?64:32,x-(boss?64:54),y-(boss?117:82),boss?128:108,boss?128:108);ctx.imageSmoothingEnabled=true;return;}const bob=Math.sin(t*.006)*4;ellipse(x,y+4,35,6,"#10292266");
     if(kind==="bat"){poly([[x-40,y-45+bob],[x-20,y-60+bob],[x,y-42+bob],[x+20,y-60+bob],[x+42,y-45+bob],[x+28,y-21+bob],[x,y-32+bob],[x-28,y-21+bob]],"#664a84");ellipse(x,y-42+bob,17,18,"#59416c")}
     else if(kind==="ghost"){ellipse(x,y-50+bob,28,37,"#c5f0df");poly([[x-28,y-51+bob],[x+28,y-51+bob],[x+24,y-16+bob],[x+13,y-24+bob],[x,y-14+bob],[x-13,y-24+bob],[x-25,y-14+bob]],"#c5f0df")}
     else{ellipse(x,y-28+bob,34,30,kind==="goblin"?"#8d9050":"#83b64c");ellipse(x-24,y-35+bob,11,12,kind==="goblin"?"#a1a85f":"#75a840")}
     ellipse(x-11,y-44+bob,5,7,"#fff9ec");ellipse(x+11,y-44+bob,5,7,"#fff9ec");
     ellipse(x-10,y-43+bob,2,4,"#273137");ellipse(x+12,y-43+bob,2,4,"#273137");
   }
-  function chest(x,y,t,opened){ellipse(x,y+2,44,8,"#09241e66");rect(x-40,y-54,80,50,"#8b5227");rect(x-38,y-51,76,9,"#ddab51");rect(x-40,y-13,80,9,"#dcab50");rect(x-6,y-45,12,24,"#f8d17a");
+  function chest(x,y,t,opened){
+    if(ready('chest')){const img=sprite.chest;const elapsed=Math.max(0,t-state.since);const frame=opened?Math.min(12,Math.floor(elapsed/95)):0;ctx.imageSmoothingEnabled=false;ctx.drawImage(img,0,frame*32,64,32,x-68,y-72,136,68);ctx.imageSmoothingEnabled=true;if(opened&&ready('healing')){let f=Math.floor(t/130)%8;ctx.imageSmoothingEnabled=false;ctx.drawImage(sprite.healing,0,f*16,16,16,x-28,y-142,56,56);ctx.imageSmoothingEnabled=true;}return;}ellipse(x,y+2,44,8,"#09241e66");rect(x-40,y-54,80,50,"#8b5227");rect(x-38,y-51,76,9,"#ddab51");rect(x-40,y-13,80,9,"#dcab50");rect(x-6,y-45,12,24,"#f8d17a");
     if(opened){poly([[x-42,y-62],[x-41,y-96],[x+39,y-96],[x+43,y-62]],"#ae742f");rect(x-37,y-90,74,8,"#e2b953");
     for(let i=0;i<13;i++){let a=i*2.4+t*.002;ellipse(x+Math.sin(a)*50,y-94+Math.cos(a*.7)*20,2.2,2.2,i%2?"#fff0a9":"#8cf6d7")}}
     else{rect(x-42,y-76,84,27,"#a96c32");rect(x-40,y-74,80,8,"#edc46e")}}
@@ -55,7 +57,7 @@
     for(let i=0;i<32;i++){let x=i*37+((i*11)%13);rect(x,278+(i%3)*7,3,7,"#769455")}
     const hx=248;
     let enemyIndex=Math.floor(state.progress/5),hasEnemy=state.progress<state.total;
-    let kind=["slime","bat","ghost","goblin","slime"][Math.min(4,enemyIndex)];
+    let kind=enemyIndex>=4?'goblin':'slime';
     if(hasEnemy && state.phase!=="chest") {
       let fade=state.phase==="spell"?Math.max(0,1-(t-state.since)/700):1;
       ctx.save();ctx.globalAlpha=fade;monster(660,268,t,kind);ctx.restore();
