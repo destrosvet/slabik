@@ -9,7 +9,7 @@
   const canvas=scene.querySelector("canvas"),ctx=canvas.getContext("2d");
   if(!ctx)return;
   const W=960,H=340;
-  const sprite={}; for(const name of ['girl','forest1','forest2','forest3','forest4','forest5','trees','ground','slime','fox','wisp','warrior','chest','healing']){const img=new Image();img.src='/assets/'+name+'.png';sprite[name]=img;}
+  const sprite={}; for(const name of ['girl','forest1','forest2','forest3','forest4','forest5','trees','ground','slime','fox','wisp','warrior','chest','healing','skeleton']){const img=new Image();img.src='/assets/'+name+'.png';sprite[name]=img;}
   const ready=name=>sprite[name]?.complete&&sprite[name]?.naturalWidth>0;
   let state={progress:0,total:25,phase:"idle",since:0,kind:"slime",finished:false};
   const now=()=>performance.now();
@@ -33,6 +33,7 @@
     line(x+17,y-62+walk,x+32,y-99+walk,"#624934",5);ellipse(x+33,y-101+walk,6,6,"#90eff8");
   }
   function monster(x,y,t,kind){
+    if(kind==='skeleton'&&ready('skeleton')){const img=sprite.skeleton;const dying=state.phase==='spell';const tick=dying?Math.min(9,Math.floor((t-state.since)/75)):Math.floor(t/165)%10;ctx.imageSmoothingEnabled=false;ctx.drawImage(img,tick*64,(dying?5:0)*64,64,64,x-64,y-128,128,128);ctx.imageSmoothingEnabled=true;return;}
     if(ready(kind==='goblin'?'warrior':'slime')){const boss=kind==='goblin',img=sprite[boss?'warrior':'slime'];const frame=Math.floor(t/140)%(boss?5:8);ctx.imageSmoothingEnabled=false;ctx.drawImage(img,boss?frame*80:frame*32,0,boss?80:32,boss?64:32,x-(boss?64:54),y-(boss?117:82),boss?128:108,boss?128:108);ctx.imageSmoothingEnabled=true;return;}const bob=Math.sin(t*.006)*4;ellipse(x,y+4,35,6,"#10292266");
     if(kind==="bat"){poly([[x-40,y-45+bob],[x-20,y-60+bob],[x,y-42+bob],[x+20,y-60+bob],[x+42,y-45+bob],[x+28,y-21+bob],[x,y-32+bob],[x-28,y-21+bob]],"#664a84");ellipse(x,y-42+bob,17,18,"#59416c")}
     else if(kind==="ghost"){ellipse(x,y-50+bob,28,37,"#c5f0df");poly([[x-28,y-51+bob],[x+28,y-51+bob],[x+24,y-16+bob],[x+13,y-24+bob],[x,y-14+bob],[x-13,y-24+bob],[x-25,y-14+bob]],"#c5f0df")}
@@ -57,7 +58,7 @@
     for(let i=0;i<32;i++){let x=i*37+((i*11)%13);rect(x,278+(i%3)*7,3,7,"#769455")}
     const hx=248;
     let enemyIndex=Math.floor(state.progress/5),hasEnemy=state.progress<state.total;
-    let kind=enemyIndex>=4?'goblin':'slime';
+    let kind=enemyIndex>=4?'goblin':enemyIndex>=2?'skeleton':'slime';
     if(hasEnemy && state.phase!=="chest") {
       let fade=state.phase==="spell"?Math.max(0,1-(t-state.since)/700):1;
       ctx.save();ctx.globalAlpha=fade;monster(660,268,t,kind);ctx.restore();
