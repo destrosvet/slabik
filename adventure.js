@@ -9,6 +9,8 @@
   const canvas=scene.querySelector("canvas"),ctx=canvas.getContext("2d");
   if(!ctx)return;
   const W=960,H=340;
+  const sprite={}; for(const name of ['girl','forest1','forest2','forest3','forest4','forest5','trees','ground']){const img=new Image();img.src='/assets/'+name+'.png';sprite[name]=img;}
+  const ready=name=>sprite[name]?.complete&&sprite[name]?.naturalWidth>0;
   let state={progress:0,total:25,phase:"idle",since:0,kind:"slime",finished:false};
   const now=()=>performance.now();
   const setPhase=p=>{state.phase=p;state.since=now()};
@@ -43,6 +45,8 @@
     else{rect(x-42,y-76,84,27,"#a96c32");rect(x-40,y-74,80,8,"#edc46e")}}
   function frame(t){const p=state.progress/state.total;ctx.clearRect(0,0,W,H);
     const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#7bb6ad");sky.addColorStop(1,"#d1d3a3");rect(0,0,W,H,sky);
+    // Genuine licensed landscape layers, with independent slow horizontal parallax.
+    for(let layer=5;layer>=1;layer--){const name='forest'+layer;if(!ready(name))continue;const img=sprite[name];const shift=(p*(6-layer)*135)%(img.width*H/img.height);const w=img.width*H/img.height;for(let x=-shift;x<W;x+=w)ctx.drawImage(img,x,0,w,H);}
     ellipse(800,54,36,36,"#f7e5a0");
     for(let i=0;i<12;i++){let x=((i*119-p*130)%1130+1130)%1130-70;tree(x,.48,(i%3)*14-14)}
     poly([[0,249],[150,217],[280,239],[420,203],[560,239],[710,205],[960,233],[960,340],[0,340]],"#638760");
@@ -57,7 +61,8 @@
       ctx.save();ctx.globalAlpha=fade;monster(660,268,t,kind);ctx.restore();
     }
     if(state.progress>=state.total||state.phase==="chest")chest(700,268,t,state.finished);
-    hero(hx+(state.phase==="walking"?Math.min(110,(t-state.since)/6):0),270,t);
+    const girlX=hx+(state.phase==="walking"?Math.min(110,(t-state.since)/6):0);
+    if(ready('girl')){const image=sprite.girl;let f=state.phase==='walking'?5+Math.floor(t/120)%5:0;ctx.imageSmoothingEnabled=false;ctx.drawImage(image,f*80,0,80,64,girlX-80,96,160,176);ctx.imageSmoothingEnabled=true;}else hero(girlX,270,t);
     if(state.phase==="spell"){let k=Math.min(1,(t-state.since)/650),x=282+k*365;ellipse(x,167+Math.sin(k*6)*12,18+9*k,18+9*k,"#e4fcab");ellipse(x,167+Math.sin(k*6)*12,11,11,"#86ead0")}
     if(state.finished){ctx.fillStyle="#0b2730cc";ctx.fillRect(240,85,480,122);ctx.fillStyle="#fff8db";ctx.font="bold 36px system-ui";ctx.textAlign="center";ctx.fillText("POKLAD JE TVŮJ!",480,139);ctx.font="19px system-ui";ctx.fillText("Lekce je dokončena",480,175);ctx.textAlign="left"}
     requestAnimationFrame(frame)}
