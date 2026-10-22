@@ -23,6 +23,10 @@ lessons = json.loads((ROOT / "lessons.json").read_text(encoding="utf-8"))
 def home():
     return FileResponse(ROOT / "index.html")
 
+@app.get("/adventure.js")
+def adventure_script():
+    return FileResponse(ROOT / "adventure.js", media_type="text/javascript")
+
 @app.get("/api/lessons")
 def get_lessons():
     return lessons
