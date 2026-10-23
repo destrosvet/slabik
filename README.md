@@ -62,3 +62,5 @@ Používané PNG jsou součástí `assets/` a Docker je při sestavení automati
 Kontroly: `python scripts/smoke_check.py`, `node scripts/frontend_check.cjs`, `docker compose exec -T slabik python scripts/api_check.py`.
 
 Postava používá celý atlas složený z vrstev v `sources/` (idle, chůze, gesto kouzlení). Původ použitých exportů je v `assets/credits.json`. Prohlížečová kontrola `scripts/scene_check.cjs` vyžaduje Playwright a Edge; kontroluje také prázdné snímky animací.
+
+Docker image včetně Railway přednačítá model při startu (`PRELOAD_MODEL=1`). Váhy se stahují z Hugging Face do `HF_HOME`; `/api/ready` vrací 200 až po načtení. Pro uchování mezi Railway deploymenty připojte persistentní volume do `/app/.cache/huggingface`. Samotné váhy nejsou součástí Gitu.
