@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.cache/
+.slabik-js-check.js
+.env
+
+*-preview.png
+scene-*.png
+
+# Original artist packages are local authoring inputs, not runtime files.
+sources/

@@ -1,80 +1,133 @@
 (() => {
-  "use strict";
-  const scene=document.createElement("section");
-  scene.className="adventure-shell";
-  scene.innerHTML='<div class="adventure-head"><span>LES KOUZELNÝCH SLABIK</span><span id="adventure-counter">0 / 25 kouzel</span></div><canvas id="adventure-canvas" width="960" height="340" role="img" aria-label="Holčička putuje lesem, potkává příšery a na konci otevře truhlu"></canvas><div class="adventure-tip" id="adventure-tip">Přečti slabiku, vykouzli cestu a najdi poklad.</div>';
-  const lessonPanel=document.querySelector("section.card");
-  if(!lessonPanel)return;
-  lessonPanel.insertAdjacentElement("afterend",scene);
-  const canvas=scene.querySelector("canvas"),ctx=canvas.getContext("2d");
-  if(!ctx)return;
-  const W=960,H=340;
-  const sprite={}; for(const name of ['girl','forest1','forest2','forest3','forest4','forest5','trees','ground','slime','fox','wisp','warrior','chest','healing','skeleton']){const img=new Image();img.src='/assets/'+name+'.png';sprite[name]=img;}
-  const ready=name=>sprite[name]?.complete&&sprite[name]?.naturalWidth>0;
-  let state={progress:0,total:25,phase:"idle",since:0,kind:"slime",finished:false};
-  const now=()=>performance.now();
-  const setPhase=p=>{state.phase=p;state.since=now()};
-  const approach=Math.min;
-  function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h)}
-  function ellipse(x,y,rx,ry,color){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
-  function poly(coords,color){ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(coords[0][0],coords[0][1]);for(let i=1;i<coords.length;i++)ctx.lineTo(coords[i][0],coords[i][1]);ctx.closePath();ctx.fill()}
-  function line(x1,y1,x2,y2,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
-  function tree(x,scale,shift=0){let y=248+shift;rect(x-7*scale,y-48*scale,14*scale,72*scale,"#463f33");for(let k=0;k<3;k++){let yy=y-(137-k*35)*scale;poly([[x,yy],[x-(45-k*6)*scale,yy+84*scale],[x+(45-k*6)*scale,yy+84*scale]],k===0?"#2b5b51":k===1?"#34634e":"#416c4d")}}
-  function hero(x,y,t){const walk=state.phase==="walking"?Math.sin(t*.016)*5:0;
-    ellipse(x,y+3,25,7,"#1d342b55");
-    // Tiny pixel inspired girl mage, drawn independently so no third-party sprites are redistributed
-    poly([[x-13,y-62+walk],[x+12,y-62+walk],[x+21,y-14],[x-22,y-14]],"#7d52a6");
-    rect(x-13,y-25,10,22,"#283f62");rect(x+4,y-25,10,22,"#283f62");
-    ellipse(x-8,y-2,9,4,"#3a2937");ellipse(x+10,y-2,9,4,"#3a2937");
-    ellipse(x,y-86+walk,20,24,"#704634");ellipse(x,y-82+walk,15,18,"#ffd0a3");
-    ellipse(x-4,y-84+walk,2,3,"#2d2d43");ellipse(x+9,y-84+walk,2,3,"#2d2d43");
-    poly([[x-25,y-97+walk],[x+20,y-97+walk],[x+2,y-123+walk]],"#70408f");
-    poly([[x-24,y-97+walk],[x+21,y-97+walk],[x+15,y-92+walk],[x-27,y-92+walk]],"#543070");
-    line(x+17,y-62+walk,x+32,y-99+walk,"#624934",5);ellipse(x+33,y-101+walk,6,6,"#90eff8");
+  'use strict';
+  const scene = document.createElement('section');
+  scene.className = 'adventure-shell';
+  scene.innerHTML = '<div class="adventure-head"><span>✦ LES KOUZELNÝCH SLABIK</span><span id="adventure-counter">0 / 25 kouzel</span></div><div class="adventure-stage"><canvas id="adventure-canvas" width="960" height="400" role="img" aria-label="Animovaná hrdinka s liškou prochází pixelovým lesem a kouzlí cestu k pokladu"></canvas><span class="adventure-location">Mýtina u starého dubu</span></div><div class="adventure-tip" id="adventure-tip">Přečti slabiku, vykouzli cestu a najdi poklad.</div><div class="adventure-credit">Grafika: GandalfHardcore</div>';
+  const lessonPanel = document.querySelector('section.card');
+  if (!lessonPanel) return;
+  lessonPanel.insertAdjacentElement('afterend', scene);
+  const canvas = scene.querySelector('canvas'), ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const W = 960, H = 400, FLOOR = 316, IMPACT = 620, STEP = 220, WALK = 2200, REVEAL = 1400;
+  const sprites = {};
+  const names = ['girl','forest1','forest2','forest3','forest4','forest5','oak','birch','grass','path','cloud','sun','birds','campfire','fox','wisp','slime','skeleton','warrior','chest','healing','tent','stump','logs','rocks','mushrooms','bush'];
+  for (const name of names) {
+    const image = new Image();
+    image.src = '/assets/' + name + '.png';
+    image.onerror = () => { tip().textContent = 'Grafiku se nepodařilo načíst. Obnov stránku.'; };
+    sprites[name] = image;
   }
-  function monster(x,y,t,kind){
-    if(kind==='skeleton'&&ready('skeleton')){const img=sprite.skeleton;const dying=state.phase==='spell';const tick=dying?Math.min(9,Math.floor((t-state.since)/75)):Math.floor(t/165)%10;ctx.imageSmoothingEnabled=false;ctx.drawImage(img,tick*64,(dying?5:0)*64,64,64,x-64,y-128,128,128);ctx.imageSmoothingEnabled=true;return;}
-    if(ready(kind==='goblin'?'warrior':'slime')){const boss=kind==='goblin',img=sprite[boss?'warrior':'slime'];const frame=Math.floor(t/140)%(boss?5:8);ctx.imageSmoothingEnabled=false;ctx.drawImage(img,boss?frame*80:frame*32,0,boss?80:32,boss?64:32,x-(boss?64:54),y-(boss?117:82),boss?128:108,boss?128:108);ctx.imageSmoothingEnabled=true;return;}const bob=Math.sin(t*.006)*4;ellipse(x,y+4,35,6,"#10292266");
-    if(kind==="bat"){poly([[x-40,y-45+bob],[x-20,y-60+bob],[x,y-42+bob],[x+20,y-60+bob],[x+42,y-45+bob],[x+28,y-21+bob],[x,y-32+bob],[x-28,y-21+bob]],"#664a84");ellipse(x,y-42+bob,17,18,"#59416c")}
-    else if(kind==="ghost"){ellipse(x,y-50+bob,28,37,"#c5f0df");poly([[x-28,y-51+bob],[x+28,y-51+bob],[x+24,y-16+bob],[x+13,y-24+bob],[x,y-14+bob],[x-13,y-24+bob],[x-25,y-14+bob]],"#c5f0df")}
-    else{ellipse(x,y-28+bob,34,30,kind==="goblin"?"#8d9050":"#83b64c");ellipse(x-24,y-35+bob,11,12,kind==="goblin"?"#a1a85f":"#75a840")}
-    ellipse(x-11,y-44+bob,5,7,"#fff9ec");ellipse(x+11,y-44+bob,5,7,"#fff9ec");
-    ellipse(x-10,y-43+bob,2,4,"#273137");ellipse(x+12,y-43+bob,2,4,"#273137");
+  const ready = name => sprites[name]?.complete && sprites[name]?.naturalWidth > 0;
+  const tip = () => document.getElementById('adventure-tip');
+  const now = () => performance.now();
+  let state = {progress:0,total:25,phase:'idle',since:0,finished:false,encounter:0};
+  let animationRun = 0, camera = 0, travelFrom = 0;
+  const setPhase = phase => { state.phase = phase; state.since = now(); };
+  function image(name, x, y, w, h, alpha=1) {
+    if (!ready(name)) return;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(sprites[name], Math.round(x), Math.round(y), w, h);
+    ctx.globalAlpha = 1;
   }
-  function chest(x,y,t,opened){
-    if(ready('chest')){const img=sprite.chest;const elapsed=Math.max(0,t-state.since);const frame=opened?Math.min(12,Math.floor(elapsed/95)):0;ctx.imageSmoothingEnabled=false;ctx.drawImage(img,0,frame*32,64,32,x-68,y-72,136,68);ctx.imageSmoothingEnabled=true;if(opened&&ready('healing')){let f=Math.floor(t/130)%8;ctx.imageSmoothingEnabled=false;ctx.drawImage(sprite.healing,0,f*16,16,16,x-28,y-142,56,56);ctx.imageSmoothingEnabled=true;}return;}ellipse(x,y+2,44,8,"#09241e66");rect(x-40,y-54,80,50,"#8b5227");rect(x-38,y-51,76,9,"#ddab51");rect(x-40,y-13,80,9,"#dcab50");rect(x-6,y-45,12,24,"#f8d17a");
-    if(opened){poly([[x-42,y-62],[x-41,y-96],[x+39,y-96],[x+43,y-62]],"#ae742f");rect(x-37,y-90,74,8,"#e2b953");
-    for(let i=0;i<13;i++){let a=i*2.4+t*.002;ellipse(x+Math.sin(a)*50,y-94+Math.cos(a*.7)*20,2.2,2.2,i%2?"#fff0a9":"#8cf6d7")}}
-    else{rect(x-42,y-76,84,27,"#a96c32");rect(x-40,y-74,80,8,"#edc46e")}}
-  function frame(t){const p=state.progress/state.total;ctx.clearRect(0,0,W,H);
-    const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#7bb6ad");sky.addColorStop(1,"#d1d3a3");rect(0,0,W,H,sky);
-    // Genuine licensed landscape layers, with independent slow horizontal parallax.
-    for(let layer=5;layer>=1;layer--){const name='forest'+layer;if(!ready(name))continue;const img=sprite[name];const shift=(p*(6-layer)*135)%(img.width*H/img.height);const w=img.width*H/img.height;for(let x=-shift;x<W;x+=w)ctx.drawImage(img,x,0,w,H);}
-    ellipse(800,54,36,36,"#f7e5a0");
-    for(let i=0;i<12;i++){let x=((i*119-p*130)%1130+1130)%1130-70;tree(x,.48,(i%3)*14-14)}
-    poly([[0,249],[150,217],[280,239],[420,203],[560,239],[710,205],[960,233],[960,340],[0,340]],"#638760");
-    for(let i=0;i<9;i++){let x=((i*161-p*430)%1350+1350)%1350-80;tree(x,.78+((i%3)*.09),0)}
-    rect(0,273,W,67,"#426044");rect(0,272,W,12,"#8b8756");
-    for(let i=0;i<32;i++){let x=i*37+((i*11)%13);rect(x,278+(i%3)*7,3,7,"#769455")}
-    const hx=248;
-    let enemyIndex=Math.floor(state.progress/5),hasEnemy=state.progress<state.total;
-    let kind=enemyIndex>=4?'goblin':enemyIndex>=2?'skeleton':'slime';
-    if(hasEnemy && state.phase!=="chest") {
-      let fade=state.phase==="spell"?Math.max(0,1-(t-state.since)/700):1;
-      ctx.save();ctx.globalAlpha=fade;monster(660,268,t,kind);ctx.restore();
+  function atlas(name, col, row, fw, fh, x, feet, scale, alpha=1, flip=false, rotation=0) {
+    if (!ready(name)) return;
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.translate(Math.round(x), Math.round(feet));
+    if (flip) ctx.scale(-1,1);
+    // Rotate the sprite around its center while keeping its anchor stable.
+    if(rotation){ctx.translate(0,-fh*scale/2);ctx.rotate(rotation);ctx.translate(0,fh*scale/2);}
+    ctx.drawImage(sprites[name], col*fw, row*fh, fw, fh, -fw*scale/2, -fh*scale, fw*scale, fh*scale);
+    ctx.restore();
+  }
+  function frame(t) {
+    const elapsed=Math.max(0,t-state.since),walking=state.phase==='walking',casting=state.phase==='spell';
+    if(walking){
+      const distance=Math.min(1,elapsed/(state.progress>=state.total?REVEAL:WALK));
+      const eased=distance*distance*(3-2*distance);
+      const destination=state.progress>=state.total?(state.total-1)*STEP+360:state.progress*STEP;
+      camera=travelFrom+(destination-travelFrom)*eased;
     }
-    if(state.progress>=state.total||state.phase==="chest")chest(700,268,t,state.finished);
-    const girlX=hx+(state.phase==="walking"?Math.min(110,(t-state.since)/6):0);
-    if(ready('girl')){const image=sprite.girl;let f=state.phase==='walking'?5+Math.floor(t/120)%5:0;ctx.imageSmoothingEnabled=false;ctx.drawImage(image,f*80,0,80,64,girlX-80,96,160,176);ctx.imageSmoothingEnabled=true;}else hero(girlX,270,t);
-    if(state.phase==="spell"){let k=Math.min(1,(t-state.since)/650),x=282+k*365;ellipse(x,167+Math.sin(k*6)*12,18+9*k,18+9*k,"#e4fcab");ellipse(x,167+Math.sin(k*6)*12,11,11,"#86ead0")}
-    if(state.finished){ctx.fillStyle="#0b2730cc";ctx.fillRect(240,85,480,122);ctx.fillStyle="#fff8db";ctx.font="bold 36px system-ui";ctx.textAlign="center";ctx.fillText("POKLAD JE TVŮJ!",480,139);ctx.font="19px system-ui";ctx.fillText("Lekce je dokončena",480,175);ctx.textAlign="left"}
-    requestAnimationFrame(frame)}
-  function updateCounter(){document.getElementById("adventure-counter").textContent=state.progress+" / "+state.total+" kouzel"}
-  function reset(progress,total){state.progress=Math.max(0,progress||0);state.total=Math.max(1,total||25);state.finished=false;setPhase("idle");updateCounter();document.getElementById("adventure-tip").textContent="Přečti slabiku, vykouzli cestu a najdi poklad."}
-  function advance(){if(state.finished)return;const previous=state.progress;state.progress=Math.min(state.total,state.progress+1);updateCounter();setPhase("spell");
-    document.getElementById("adventure-tip").textContent=state.progress===state.total?"Poslední kouzlo! Truhla už čeká.":"Kouzlo se povedlo! Vyrážíme dál.";
-    setTimeout(()=>{if(state.progress!==previous+1)return;setPhase("walking")},680);
-    setTimeout(()=>{if(state.progress!==previous+1)return;if(state.progress>=state.total){state.finished=true;setPhase("chest");document.getElementById("adventure-tip").textContent="Poklad nalezen. Lekce je hotová."}else setPhase("idle")},1600)}
-  window.SlabikAdventure={reset,advance,finish(){state.progress=state.total;state.finished=true;setPhase("chest");updateCounter()},setProgress(p,total){state.progress=p;state.total=total;state.finished=p>=total;setPhase(state.finished?"chest":"idle");updateCounter()}};
+    if(state.phase==='arriving' && elapsed>=450) setPhase('idle');
+    ctx.clearRect(0,0,W,H); ctx.imageSmoothingEnabled = false;
+    // All scenery comes from the original pixel art. No procedural replacement art.
+    image('sun',735-camera*.025,28,78,78,.8);
+    for (let i=0;i<5;i++) {
+      const x=((i*270-t*.004-camera*.08)%1400+1400)%1400-160;
+      image('cloud',x,35+(i%3)*23,125+(i%2)*45,50+(i%2)*18,.7);
+    }
+    for (let layer=5;layer>=1;layer--) {
+      const name='forest'+layer;
+      if (!ready(name)) continue;
+      const width=sprites[name].width*H/sprites[name].height;
+      const offset=(camera*(6-layer)*.13)%width;
+      for(let x=-offset;x<W;x+=width) image(name,x,0,width,H);
+    }
+    image('birds',((t*.021-camera*.1)%1250)-100,65+Math.sin(t*.0006)*13,60,60,.7);
+    // Tile the seamless center piece of Floor Tiles1 along the trail.
+    for(let x=-(camera%64)-64;x<W;x+=64) image('path',x,FLOOR,64,128);
+    for(let i=0;i<6;i++) {
+      const x=((i*340-camera*.7)%1800+1800)%1800-260;
+      image(i%2?'birch':'oak',x,FLOOR-275,330,275);
+    }
+    // Fixed world positions: props and campfire move at the same speed as the trail.
+    const worldX=x=>((x-camera+300)%2200+2200)%2200-300;
+    const prop=(name,world,width,groundOffset=0)=>{
+      if(!ready(name))return;
+      const height=width*sprites[name].height/sprites[name].width;
+      image(name,worldX(world)-width/2,FLOOR+3+groundOffset-height,width,height);
+    };
+    prop('tent',870,150);
+    prop('logs',1095,82);
+    prop('stump',425,65);
+    prop('rocks',1370,126,18);
+    prop('mushrooms',1640,78);
+    prop('bush',1910,116,4);
+    atlas('campfire',Math.floor(t/110)%5,0,32,32,worldX(1000),FLOOR+3,2);
+    const encounter=casting?state.encounter:state.progress;
+    const enemy=Math.floor(encounter/5)%3;
+    const hurt=casting && elapsed>=IMPACT;
+    const death= Math.max(0,elapsed-IMPACT);
+    if (!walking && !state.finished && (state.progress<state.total || casting)) {
+      const fade=hurt?Math.max(0,1-death/650):1;
+      const arrival=state.phase==='arriving'?Math.min(1,elapsed/450):1;
+      const x=690+360*(1-arrival)*(1-arrival);
+      if(enemy===0) atlas('slime',hurt?Math.min(5,Math.floor(death/100)):Math.floor(t/135)%5,hurt?2:0,32,32,x,FLOOR+5,3,fade);
+      if(enemy===1) atlas('skeleton',hurt?Math.min(9,Math.floor(death/65)):Math.floor(t/150)%10,hurt?5:0,64,64,x,FLOOR+8,2.4,fade);
+      if(enemy===2) atlas('warrior',Math.floor(t/165)%5,0,80,64,x,FLOOR+8,2.8,fade);
+    }
+    const chestX=(state.total-1)*STEP+1175-camera;
+    if(chestX>=-48 && chestX<=W+48) {
+      atlas('chest',0,state.finished?Math.min(12,Math.floor(elapsed/90)):0,32,32,chestX,FLOOR+3,3);
+      if(state.finished) atlas('healing',0,Math.floor(t/120)%8,16,16,chestX,FLOOR-100+Math.sin(t*.004)*7,3);
+    }
+    const finalApproach=state.progress>=state.total && !casting;
+    const walkFraction=Math.max(0,Math.min(1,(elapsed-(finalApproach?REVEAL:0))/WALK));
+    const walkEase=walkFraction*walkFraction*(3-2*walkFraction);
+    const heroX=finalApproach?(walking?300+455*walkEase:755):300;
+    // Walk all the way up to the chest before the opening phase begins.
+    atlas('girl',casting?Math.min(5,Math.floor(elapsed/115)):walking?Math.floor(t/100)%8:Math.floor(t/220)%5,casting?5:walking?1:0,80,64,heroX,FLOOR+3,3,1,true);
+    atlas('fox',walking?Math.floor(t/90)%6:Math.floor(t/210)%5,walking?1:0,32,32,heroX-103,FLOOR+5,2.4);
+    const spellX=casting?330+Math.min(1,elapsed/IMPACT)*365:heroX+75+Math.sin(t*.0018)*15;
+    const spellY=casting?FLOOR-10:FLOOR-120+Math.sin(t*.003)*12;
+    atlas('wisp',Math.floor(t/90)%5,0,32,32,spellX,spellY,casting?2.7:1.7,casting?Math.max(0,1-Math.max(0,elapsed-IMPACT)/180):.85,false,casting?-Math.PI/2:0);
+    // Edge trees frame the path without covering the characters.
+    image('oak',((-225-camera*1.2+450)%2250+2250)%2250-450,FLOOR-632,860,700);
+    image('birch',((900-camera*1.2+450)%2250+2250)%2250-450,FLOOR-602,720,670);
+    for(let i=0;i<12;i++) {
+      const x=((i*127-camera*1.15)%1500+1500)%1500-180;
+      image('grass',x,FLOOR+18+(i%3)*15,144,48,.9);
+    }
+    requestAnimationFrame(frame);
+  }
+  function updateCounter(){document.getElementById('adventure-counter').textContent=state.progress+' / '+state.total+' kouzel';}
+  function reset(progress,total){animationRun++;state.progress=Math.max(0,progress||0);state.total=Math.max(1,total||25);state.finished=false;camera=state.progress*STEP;setPhase('idle');updateCounter();tip().textContent='Přečti slabiku, vykouzli cestu a najdi poklad.';}
+  function advance(){
+    if(state.finished)return;
+    const animation=++animationRun;state.encounter=state.progress;state.progress=Math.min(state.total,state.progress+1);updateCounter();setPhase('spell');
+    tip().textContent=state.progress===state.total?'Poslední kouzlo! Truhla už čeká.':'Kouzlo se povedlo! Liška tě doprovodí dál.';
+    setTimeout(()=>{if(animation!==animationRun)return;travelFrom=camera;setPhase('walking');},1500);
+    setTimeout(()=>{if(animation!==animationRun)return;if(state.progress<state.total)camera=state.progress*STEP;if(state.progress>=state.total){camera=(state.total-1)*STEP+360;state.finished=true;setPhase('chest');tip().textContent='Poklad nalezen. Lekce je hotová.';}else setPhase('arriving');},1500+WALK+(state.progress>=state.total?REVEAL:0));
+  }
+  window.SlabikAdventure={reset,advance,finish(){this.setProgress(state.total,state.total);},setProgress(p,total){animationRun++;state.total=Math.max(1,total);state.progress=Math.max(0,Math.min(p,state.total));state.finished=state.progress>=state.total;camera=state.finished?(state.total-1)*STEP+360:state.progress*STEP;setPhase(state.finished?'chest':'idle');updateCounter();tip().textContent=state.finished?'Poklad nalezen. Lekce je hotová.':'Přečti slabiku, vykouzli cestu a najdi poklad.';}};
   reset(0,25);requestAnimationFrame(frame);
 })();

@@ -1,0 +1,71 @@
+{
+  "artist": "GandalfHardcore",
+  "character_layers": [
+    "Character skin colors/Female Skin1.png",
+    "Female Clothing/Purple Socks.png",
+    "Female Clothing/Boots.png",
+    "Female Clothing/Skirt.png",
+    "Female Clothing/Purple Corset v2.png",
+    "Female Hair/Female Hair3.png"
+  ],
+  "exports": {
+    "oak": "Tree1.png",
+    "birch": "Birch1.png",
+    "grass": "Tall Grass.png",
+    "cloud": "cloud1.png",
+    "sun": "sun.png",
+    "birds": "birds1.png",
+    "campfire": "Campfire sheet.png",
+    "fox": "GandalfHardcore fox.png",
+    "wisp": "GandalfHardcore Wisp.png",
+    "slime": "Slime green.png",
+    "skeleton": "skeleton sheet.png",
+    "warrior": "GandalfHardcore Warrior.png",
+    "healing": "Healing Sheet.png"
+  },
+  "path": {
+    "source": "Floor Tiles1.png",
+    "crop": [
+      32,
+      0,
+      64,
+      32
+    ]
+  },
+  "props": {
+    "tent": "Small Tent.png",
+    "decor_sheet": "Decor.png",
+    "crops": {
+      "stump": [
+        192,
+        0,
+        224,
+        32
+      ],
+      "logs": [
+        192,
+        64,
+        256,
+        96
+      ],
+      "rocks": [
+        0,
+        272,
+        96,
+        336
+      ],
+      "mushrooms": [
+        320,
+        0,
+        384,
+        32
+      ],
+      "bush": [
+        0,
+        424,
+        64,
+        448
+      ]
+    }
+  }
+}

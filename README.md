@@ -45,6 +45,20 @@ node --check .slabik-js-check.js
 
 ## Herní režim (Kouzelný les)
 
-`adventure.js` nyní zobrazuje paralaxní vrstvy lesa a dívku jako animovaný sprite atlas. Pro vykreslení skutečných sprite assetů umístěte exportované PNG soubory do kořenové složky `assets/` (veřejné URL `/assets/girl.png`, `/assets/forest1.png` až `/assets/forest5.png`). Dokud chybějí, hra používá jednoduché záložní kresby v Canvasu. Po úspěšné slabice vyšle kouzlo a postoupí, na konci otevře truhlu.
+`adventure.js` nyní zobrazuje paralaxní vrstvy lesa a dívku jako animovaný sprite atlas. Pro vykreslení skutečných sprite assetů umístěte exportované PNG soubory do kořenové složky `assets/` (veřejné URL `/assets/girl.png`, `/assets/forest1.png` až `/assets/forest5.png`). Scéna používá výhradně pixelové assety: vrstvený les, dlaždicovou cestu, stromy, trávu, lišku a světélko. Chybějící PNG ohlásí chybou načítání grafiky. Po úspěšné slabice vyšle kouzlo a postoupí, na konci otevře truhlu.
 
-Originální balíčky obsahují zákaz samostatné redistribuce; exportované herní atlasy jsou proto poskytovány odděleně v konverzačním ZIP archivu, nikoli jako samostatné zdrojové soubory v tomto veřejném repozitáři.
+Runtime exporty použité touto hrou jsou v `assets/`, takže se při nasazení z GitHubu zahrnou do Docker image. Grafika je od GandalfHardcore a nepodléhá MIT licenci zdrojového kódu; není určena k samostatné redistribuci. Původní autorské balíčky v `sources/` zůstávají pouze lokálně a jsou vynechány z Gitu i Docker image.
+
+## Docker Desktop
+
+Spustit v kořeni projektu: `docker compose up --build -d`.
+Otevřít http://localhost:8000. `docker compose logs -f` zobrazí průběh.
+První start stahuje AI model a může trvat několik minut; `/api/ready` vrací 503, dokud není model připraven. `/api/status` kontroluje běh webu.
+Model zůstává ve svazku `slabik_model-cache` i po `docker compose down`.
+Zastavení: `docker compose down`. Port je dostupný pouze na tomto počítači.
+Image používá Python 3.11 a CPU PyTorch, místní Python není potřeba.
+Používané PNG jsou součástí `assets/` a Docker je při sestavení automaticky zkopíruje.
+
+Kontroly: `python scripts/smoke_check.py`, `node scripts/frontend_check.cjs`, `docker compose exec -T slabik python scripts/api_check.py`.
+
+Postava používá celý atlas složený z vrstev v `sources/` (idle, chůze, gesto kouzlení). Původ použitých exportů je v `assets/credits.json`. Prohlížečová kontrola `scripts/scene_check.cjs` vyžaduje Playwright a Edge; kontroluje také prázdné snímky animací.

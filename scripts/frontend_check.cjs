@@ -1,0 +1,56 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const elements=new Map();
+const element=()=>({value:'auto',style:{},disabled:false,setAttribute(){},replaceChildren(){},append(){}});
+const context={console,window:{SlabikAdventure:{setProgress(p,t){context.progress=[p,t]},reset(){},advance(){}}},document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement:element},localStorage:{getItem(){return context.saved||null},setItem(){}},fetch:()=>new Promise(()=>{}),setTimeout,Blob,DataView,ArrayBuffer,Float32Array};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync('index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1],context);
+vm.runInContext("lessons=[{id:'test',title:'Test',items:['MO','LO']}];switchLesson('test');busy=true;resetLesson();if(index!==0||run!==1)throw Error('busy reset');busy=false;index=1;el('previous').onclick();",context);
+assert.deepEqual(context.progress,[0,2]);
+context.saved=JSON.stringify({index:1,finished:true,results:{}});
+vm.runInContext("switchLesson('test')",context);assert.deepEqual(context.progress,[2,2]);
+vm.runInContext("resetLesson();if(finished||index!==0)throw Error('reset failed')",context);
+console.log('Reset guard, back navigation, completed lesson restore: OK');
+const timers=[],nodes=new Map();
+const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:''});return nodes.get(id)};
+const game={window:{},performance:{now:()=>0},Image:class{},setTimeout:fn=>timers.push(fn),requestAnimationFrame(){},document:{createElement:()=>({querySelector:()=>({getContext:()=>({})})}),querySelector:()=>({insertAdjacentElement(){}}),getElementById:node}};
+vm.createContext(game);vm.runInContext(fs.readFileSync('adventure.js','utf8'),game);
+game.window.SlabikAdventure.reset(0,1);game.window.SlabikAdventure.advance();
+game.window.SlabikAdventure.reset(0,1);game.window.SlabikAdventure.advance();
+timers[0]();timers[1]();assert(!node('adventure-tip').textContent.includes('Poklad nalezen'));
+timers[2]();timers[3]();assert(node('adventure-tip').textContent.includes('Poklad nalezen'));
+console.log('Stale animation callbacks after reset: OK');
+// Render-level regression: camera stands still during the spell, enemies wait for travel.
+let frameCallback,clock=0;const phaseTimers=[],draws=[];
+const drawing={globalAlpha:1,clearRect(){},save(){},restore(){},translate(){},scale(){},rotate(){},drawImage(img,...args){draws.push({src:img.src,args})}};
+const sequence={window:{},performance:{now:()=>clock},Image:class{constructor(){this.complete=true;this.naturalWidth=1024;this.width=1024;this.height=346;}},setTimeout:fn=>phaseTimers.push(fn),requestAnimationFrame:fn=>frameCallback=fn,document:{createElement:()=>({querySelector:()=>({getContext:()=>drawing})}),querySelector:()=>({insertAdjacentElement(){}}),getElementById:node}};
+vm.createContext(sequence);vm.runInContext(fs.readFileSync('adventure.js','utf8'),sequence);
+function render(at){clock=at;draws.length=0;frameCallback(at);return draws.slice();}
+function pathX(items){return items.find(d=>d.src.endsWith('/path.png')).args[0];}
+const original=render(0);sequence.window.SlabikAdventure.advance();
+assert.equal(pathX(render(700)),pathX(original),'camera moved during spell');
+clock=1500;phaseTimers[0]();const travel=render(2600);
+assert.notEqual(pathX(travel),pathX(original),'camera did not move during walk');
+assert(!travel.some(d=>/\/(slime|skeleton|warrior)\.png$/.test(d.src)),'enemy visible during walk');
+clock=3700;phaseTimers[1]();const arriving=render(3800);
+assert(arriving.some(d=>d.src.endsWith('/slime.png')),'new enemy did not arrive');
+assert.equal(pathX(arriving),pathX(render(4100)),'camera kept moving after walk');
+console.log('Spell holds camera, walk hides enemy, arrival follows travel: OK');
+
+const foregroundX=items=>items.filter(d=>d.src.endsWith('/birch.png')).at(-1).args[0];
+assert.notEqual(foregroundX(original),foregroundX(travel),'foreground tree did not scroll');
+sequence.window.SlabikAdventure.reset(24,25);
+clock=5000;sequence.window.SlabikAdventure.advance();clock=6500;phaseTimers[2]();
+const nearChest=render(8600);
+assert(nearChest.some(d=>d.src.endsWith('/girl.png')));
+clock=8700;phaseTimers[3]();
+assert(node('adventure-tip').textContent.includes('Poklad nalezen'));
+console.log('Foreground scroll and final chest approach: OK');
+sequence.window.SlabikAdventure.setProgress(23,25);
+assert(!render(9000).some(d=>d.src.endsWith('/chest.png')),'chest appeared before last enemy');
+sequence.window.SlabikAdventure.setProgress(24,25);clock=9200;sequence.window.SlabikAdventure.advance();
+assert(!render(9700).some(d=>d.src.endsWith('/chest.png')),'chest appeared during last fight');
+clock=10700;phaseTimers[4]();const finalWalk=render(11600);
+assert(finalWalk.some(d=>d.src.endsWith('/chest.png')),'chest missing after last victory');
+assert.notEqual(pathX(finalWalk),pathX(render(11900)),'camera did not reveal the chest');
+assert.equal(pathX(render(12300)),pathX(render(13700)),'camera moved after chest reveal');
+console.log('Chest is revealed by scrolling, then camera holds during approach: OK');
