@@ -10,10 +10,11 @@
   if (!ctx) return;
   const W = 960, H = 400, FLOOR = 316, IMPACT = 620, STEP = 220, WALK = 2200, REVEAL = 1400;
   const sprites = {};
+  const assetQuery = document.currentScript?.src?.split('?')[1];
   const names = ['girl','forest1','forest2','forest3','forest4','forest5','oak','birch','grass','path','cloud','sun','birds','campfire','fox','wisp','slime','skeleton','warrior','chest','healing','tent','stump','logs','rocks','mushrooms','bush'];
   for (const name of names) {
     const image = new Image();
-    image.src = '/assets/' + name + '.png';
+    image.src = '/assets/' + name + '.png' + (assetQuery ? '?' + assetQuery : '');
     image.onerror = () => { tip().textContent = 'Grafiku se nepodařilo načíst. Obnov stránku.'; };
     sprites[name] = image;
   }

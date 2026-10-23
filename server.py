@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+import hashlib
 import io
 import json
 import threading
@@ -13,12 +14,17 @@ import soundfile as sf
 from scipy.signal import resample_poly
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from model_engine import MODEL_ID, SyllableEngine
 
 ROOT = Path(__file__).resolve().parent
+asset_digest = hashlib.sha256((ROOT / "adventure.js").read_bytes())
+for asset_path in sorted((ROOT / "assets").glob("*.png")):
+    asset_digest.update(asset_path.name.encode())
+    asset_digest.update(asset_path.read_bytes())
+ASSET_VERSION = asset_digest.hexdigest()[:12]
 logger = logging.getLogger("uvicorn.error")
 model_task = None
 
@@ -46,11 +52,13 @@ lessons = json.loads((ROOT / "lessons.json").read_text(encoding="utf-8"))
 
 @app.get("/")
 def home():
-    return FileResponse(ROOT / "index.html")
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    html = html.replace('/adventure.js"', f'/adventure.js?v={ASSET_VERSION}"')
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 @app.get("/adventure.js")
 def adventure_script():
-    return FileResponse(ROOT / "adventure.js", media_type="text/javascript")
+    return FileResponse(ROOT / "adventure.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 @app.get("/api/lessons")
 def get_lessons():
@@ -58,7 +66,7 @@ def get_lessons():
 
 @app.get("/api/status")
 def status():
-    return {"model": MODEL_ID, "loaded": engine.model is not None, "device": engine.device, "version": "0.4.0"}
+    return {"model": MODEL_ID, "loaded": engine.model is not None, "device": engine.device, "version": "0.4.0", "assets_version": ASSET_VERSION}
 
 @app.get("/api/ready")
 def ready():

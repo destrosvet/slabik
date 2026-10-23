@@ -11,7 +11,7 @@ const {chromium}=require('playwright');
     return draw.apply(this,args);
    };
   });
- await page.goto('http://localhost:8000');await page.waitForFunction(()=>!document.querySelector('#accept').disabled);
+ await page.goto(process.env.BASE_URL || 'http://localhost:8000');await page.waitForFunction(()=>!document.querySelector('#accept').disabled);
  await page.waitForTimeout(3000);await page.locator('.adventure-shell').screenshot({path:'scene-preview.png'});
  await page.locator('#accept').click();await page.waitForTimeout(400);await page.locator('.adventure-shell').screenshot({path:'scene-spell.png'});
  await page.waitForTimeout(1900);await page.locator('#previous').click();
